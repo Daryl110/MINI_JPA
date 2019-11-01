@@ -47,6 +47,20 @@ public class Persistence {
     }
 
     // Create table query
+    private static String createDropTableQuery(Class clase) {
+        String query = "";
+        Entity entity = (Entity) clase.getAnnotation(Entity.class);
+
+        if (entity != null) {
+            query += "DROP TABLE " + entity.schema() + "." + entity.name();
+        } else {
+            query += "DROP TABLE " + clase.getSimpleName();
+        }
+
+        return query;
+    }
+    
+    // Create table query
     private static String createQuery(Class clase) {
         String query = "";
         Entity entity = (Entity) clase.getAnnotation(Entity.class);
@@ -295,6 +309,13 @@ public class Persistence {
     /*
      * ****************************** CRUD ***********************************
      */
+    public static boolean dropTable(Class clase) throws Exception {
+        String query = Persistence.createDropTableQuery(clase);
+        Connection connection = Persistence.getConnection(clase);
+        Statement statement = connection.createStatement();
+        return statement.execute(query);
+    }
+    
     public static boolean create(Class clase) throws Exception {
         String query = Persistence.createQuery(clase);
         Connection connection = Persistence.getConnection(clase);
@@ -304,7 +325,6 @@ public class Persistence {
 
     public static ResultSet get(Class clase, Object id) throws Exception {
         String query = Persistence.createSelectQuery(clase, id);
-        System.out.println(query);
         Connection connection = Persistence.getConnection(clase);
         Statement statement = connection.createStatement();
         return statement.executeQuery(query);

@@ -22,17 +22,12 @@ import java.util.logging.Logger;
 public class PersonController {
 
     public PersonController() {
-        try {
-            Persistence.create(Person.class);
-        } catch (Exception ex) {
-            Logger.getLogger(PersonController.class.getName()).log(Level.SEVERE,
-                    null, " error al crear tabla " + Person.class.getAnnotation(Entity.class).name() + " " + ex.getMessage());
-        }
+        this.createTable();
     }
 
     public boolean persist(Person person) {
         try {
-            return Persistence.persist(person);
+            return !Persistence.persist(person);
         } catch (Exception ex) {
             Logger.getLogger(PersonController.class.getName()).log(Level.SEVERE,
                     null, " error al insentar en " + Person.class.getAnnotation(Entity.class).name() + " " + ex);
@@ -42,7 +37,7 @@ public class PersonController {
 
     public boolean update(Person person) {
         try {
-            return Persistence.update(person);
+            return !Persistence.update(person);
         } catch (Exception ex) {
             Logger.getLogger(PersonController.class.getName()).log(Level.SEVERE,
                     null, " error al insentar en " + Person.class.getAnnotation(Entity.class).name() + " " + ex);
@@ -53,6 +48,7 @@ public class PersonController {
     public Person findById(String cc) {
         try {
             ResultSet resultSet = Persistence.get(Person.class, cc);
+            resultSet.next();
             return new Person(resultSet.getString("id"), resultSet.getString("name"));
         } catch (Exception ex) {
             Logger.getLogger(PersonController.class.getName()).log(Level.SEVERE,
@@ -80,10 +76,30 @@ public class PersonController {
     
     public boolean delete(String cc) {
         try {
-            return Persistence.delete(Person.class, cc);
+            return !Persistence.delete(Person.class, cc);
         } catch (Exception ex) {
             Logger.getLogger(PersonController.class.getName()).log(Level.SEVERE,
                     null, " error al eliminar en " + Person.class.getAnnotation(Entity.class).name() + " con el id : " + cc + " " + ex);
+            return false;
+        }
+    }
+    
+    public boolean createTable(){
+        try {
+            return !Persistence.create(Person.class);
+        } catch (Exception ex) {
+            Logger.getLogger(PersonController.class.getName()).log(Level.SEVERE,
+                    null, " error al crear tabla " + Person.class.getAnnotation(Entity.class).name() + " " + ex.getMessage());
+            return false;
+        }
+    }
+    
+    public boolean dropTable(){
+        try {
+            return !Persistence.dropTable(Person.class);
+        } catch (Exception ex) {
+            Logger.getLogger(PersonController.class.getName()).log(Level.SEVERE,
+                    null, " error al eliminar tabla " + Person.class.getAnnotation(Entity.class).name() + " " + ex.getMessage());
             return false;
         }
     }
