@@ -21,15 +21,10 @@ public class Main {
      */
     public static void main(String[] args) {
         try {
-//            Persistence.create(Person.class);
-//            Person person = new Person("1094971007", "Daryl");
-            ResultSet resultSet = Persistence.get(Person.class, "1094971007");
-            Person person = null;
+            ResultSet resultSet = Persistence.get(Person.class, "1094971008");
             while (resultSet.next()) {
-                person = new Person(resultSet.getString("id"), resultSet.getString("name"));
+                System.out.println(new Person(resultSet.getString("id"), resultSet.getString("name")).toString());
             }
-            
-            System.out.println(person.toString());
         } catch (Exception e) {
             Logger.getLogger(Persistence.class.getSimpleName()).severe(e.getMessage());
         }

@@ -96,33 +96,37 @@ public class Persistence {
             query += "SELECT * FROM " + clase.getSimpleName();
         }
 
-        query += " WHERE ";
+        if (id != null) {
+            query += " WHERE ";
 
-        String equals = "";
+            String equals = "";
 
-        Field[] attributes = clase.getDeclaredFields();
-        for (Field field : attributes) {
-            Column column = (Column) field.getAnnotation(Column.class);
+            Field[] attributes = clase.getDeclaredFields();
+            for (Field field : attributes) {
+                Column column = (Column) field.getAnnotation(Column.class);
 
-            if (column == null) {
-                break;
-            }
+                if (column == null) {
+                    break;
+                }
 
-            if (column.isPk()) {
-                equals += column.name()+"=";
-                
-                switch (id.getClass().getSimpleName()) {
-                    case "String":
-                    case "Date":
-                        equals += "\'"+id+"\'";
-                        break;
-                    default:
-                        equals += id;
+                if (column.isPk()) {
+                    equals += column.name() + "=";
+
+                    switch (id.getClass().getSimpleName()) {
+                        case "String":
+                        case "Date":
+                            equals += "\'" + id + "\'";
+                            break;
+                        default:
+                            equals += id;
+                    }
                 }
             }
-        }
 
-        return query + equals + ";";
+            return query + equals + ";";
+        } else {
+            return query + ";";
+        }
     }
 
     // Insert query
@@ -196,11 +200,11 @@ public class Persistence {
     /*
      * ****************************** CRUD ***********************************
      */
-    public static void create(Class clase) throws Exception {
+    public static boolean create(Class clase) throws Exception {
         String query = Persistence.createQuery(clase);
         Connection connection = Persistence.getConnection(clase);
         Statement statement = connection.createStatement();
-        statement.execute(query);
+        return statement.execute(query);
     }
 
     public static ResultSet get(Class clase, Object id) throws Exception {
@@ -211,10 +215,17 @@ public class Persistence {
         return statement.executeQuery(query);
     }
 
-    public static void persist(Object obj) throws Exception {
+    public static ResultSet get(Class clase) throws Exception {
+        String query = Persistence.createSelectQuery(clase, null);
+        Connection connection = Persistence.getConnection(clase);
+        Statement statement = connection.createStatement();
+        return statement.executeQuery(query);
+    }
+
+    public static boolean persist(Object obj) throws Exception {
         String query = Persistence.createPersistQuery(obj);
         PreparedStatement preparedStatement = Persistence.createPreparedStatement(query, obj);
-        preparedStatement.execute();
+        return preparedStatement.execute();
     }
     /*
      * **************************** FIN CRUD *********************************
