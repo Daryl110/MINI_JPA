@@ -128,7 +128,7 @@ public class Persistence {
             return query + ";";
         }
     }
-    
+
     // Delete query
     private static String createDeleteQuery(Class clase, Object id) {
         String query = "";
@@ -207,6 +207,43 @@ public class Persistence {
         return query + " VALUES (" + params.substring(0, params.length() - 1) + ");";
     }
 
+    // Update query
+    private static String createUpdateQuery(Object obj) throws NullPointerException {
+        Class clase = obj.getClass();
+        String query = "";
+        Entity entity = (Entity) clase.getAnnotation(Entity.class);
+
+        if (entity != null) {
+            query += "UPDATE " + entity.schema() + "." + entity.name();
+        } else {
+            query += "UPDATE " + clase.getSimpleName();
+        }
+
+        query += " SET ";
+
+        String cols = "";
+
+        Field[] attributes = clase.getDeclaredFields();
+        Field id = null;
+        for (Field field : attributes) {
+            Column column = (Column) field.getAnnotation(Column.class);
+
+            if (column == null) {
+                break;
+            }
+
+            if (!column.isPk()) {
+                cols += column.name() + "=?,";
+            } else {
+                id = field;
+            }
+        }
+
+        query += cols.substring(0, cols.length() - 1) + " WHERE " + ((Column) id.getAnnotation(Column.class)).name() + "=";
+
+        return query + "?;";
+    }
+
     private static List<Object> getValues(Object obj) throws IllegalArgumentException, IllegalAccessException,
             InvocationTargetException, NoSuchMethodException, SecurityException {
 
@@ -228,14 +265,28 @@ public class Persistence {
         return values;
     }
 
-    private static PreparedStatement createPreparedStatement(String query, Object obj) throws Exception {
+    private static PreparedStatement createPreparedStatement(String query, Object obj, boolean update) throws Exception {
         List values = Persistence.getValues(obj);
         Connection connection = Persistence.getConnection(obj.getClass());
         PreparedStatement preparedStatement = connection.prepareStatement(query);
-        int i = 1;
-        for (Object value : values) {
-            preparedStatement.setObject(i, value);
+        int j = 1, i;
+
+        if (update) {
+            i = 1;
+        } else {
+            i = 2;
+        }
+
+        while (j < values.size()) {
+            preparedStatement.setObject(i, values.get(j));
             i++;
+            j++;
+        }
+
+        if (update) {
+            preparedStatement.setObject(values.size(), values.get(0));
+        } else {
+            preparedStatement.setObject(1, values.get(0));
         }
 
         return preparedStatement;
@@ -265,7 +316,7 @@ public class Persistence {
         Statement statement = connection.createStatement();
         return statement.executeQuery(query);
     }
-    
+
     public static boolean delete(Class clase, Object id) throws Exception {
         String query = Persistence.createDeleteQuery(clase, id);
         Connection connection = Persistence.getConnection(clase);
@@ -273,9 +324,15 @@ public class Persistence {
         return statement.execute(query);
     }
 
+    public static boolean update(Object obj) throws Exception {
+        String query = Persistence.createUpdateQuery(obj);
+        PreparedStatement preparedStatement = Persistence.createPreparedStatement(query, obj, true);
+        return preparedStatement.execute();
+    }
+
     public static boolean persist(Object obj) throws Exception {
         String query = Persistence.createPersistQuery(obj);
-        PreparedStatement preparedStatement = Persistence.createPreparedStatement(query, obj);
+        PreparedStatement preparedStatement = Persistence.createPreparedStatement(query, obj, false);
         return preparedStatement.execute();
     }
     /*
