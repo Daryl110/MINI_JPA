@@ -128,6 +128,50 @@ public class Persistence {
             return query + ";";
         }
     }
+    
+    // Delete query
+    private static String createDeleteQuery(Class clase, Object id) {
+        String query = "";
+        Entity entity = (Entity) clase.getAnnotation(Entity.class);
+
+        if (entity != null) {
+            query += "DELETE FROM " + entity.schema() + "." + entity.name();
+        } else {
+            query += "DELETE FROM " + clase.getSimpleName();
+        }
+
+        if (id != null) {
+            query += " WHERE ";
+
+            String equals = "";
+
+            Field[] attributes = clase.getDeclaredFields();
+            for (Field field : attributes) {
+                Column column = (Column) field.getAnnotation(Column.class);
+
+                if (column == null) {
+                    break;
+                }
+
+                if (column.isPk()) {
+                    equals += column.name() + "=";
+
+                    switch (id.getClass().getSimpleName()) {
+                        case "String":
+                        case "Date":
+                            equals += "\'" + id + "\'";
+                            break;
+                        default:
+                            equals += id;
+                    }
+                }
+            }
+
+            return query + equals + ";";
+        } else {
+            return query + ";";
+        }
+    }
 
     // Insert query
     private static String createPersistQuery(Object obj) {
@@ -220,6 +264,13 @@ public class Persistence {
         Connection connection = Persistence.getConnection(clase);
         Statement statement = connection.createStatement();
         return statement.executeQuery(query);
+    }
+    
+    public static boolean delete(Class clase, Object id) throws Exception {
+        String query = Persistence.createDeleteQuery(clase, id);
+        Connection connection = Persistence.getConnection(clase);
+        Statement statement = connection.createStatement();
+        return statement.execute(query);
     }
 
     public static boolean persist(Object obj) throws Exception {
