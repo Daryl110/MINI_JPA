@@ -15,6 +15,7 @@ import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +29,8 @@ public class Persistence {
 
     public static final String PROPERTIES = "persistence.properties";
 
-    private Connection getConnection(Class clase) throws Exception {
-        Properties properties = this.loadProperties(clase);
+    private static Connection getConnection(Class clase) throws Exception {
+        Properties properties = Persistence.loadProperties(clase);
         Class.forName(properties.getProperty("driver"));
         return DriverManager.getConnection(
                 properties.getProperty("url"),
@@ -38,15 +39,15 @@ public class Persistence {
         );
     }
 
-    private Properties loadProperties(Class clase) throws IOException {
+    private static Properties loadProperties(Class clase) throws IOException {
         Properties properties = new Properties();
         InputStream input = clase.getClassLoader().getResourceAsStream(PROPERTIES);
         properties.load(input);
         return properties;
     }
-    
+
     // Create table query
-    private String createQuery(Class clase) {
+    private static String createQuery(Class clase) {
         String query = "";
         Entity entity = (Entity) clase.getAnnotation(Entity.class);
 
@@ -69,7 +70,7 @@ public class Persistence {
             }
 
             cols += column.name();
-            
+
             switch (field.getType().getSimpleName()) {
                 case "String":
                     cols += " varchar(255)";
@@ -77,15 +78,55 @@ public class Persistence {
                 default:
                     throw new AssertionError();
             }
-            
+
             cols += ",";
         }
 
         return query + cols.substring(0, cols.length() - 1) + ");";
     }
-    
+
+    // Select query by id
+    private static String createSelectQuery(Class clase, Object id) {
+        String query = "";
+        Entity entity = (Entity) clase.getAnnotation(Entity.class);
+
+        if (entity != null) {
+            query += "SELECT * FROM " + entity.schema() + "." + entity.name();
+        } else {
+            query += "SELECT * FROM " + clase.getSimpleName();
+        }
+
+        query += " WHERE ";
+
+        String equals = "";
+
+        Field[] attributes = clase.getDeclaredFields();
+        for (Field field : attributes) {
+            Column column = (Column) field.getAnnotation(Column.class);
+
+            if (column == null) {
+                break;
+            }
+
+            if (column.isPk()) {
+                equals += column.name()+"=";
+                
+                switch (id.getClass().getSimpleName()) {
+                    case "String":
+                    case "Date":
+                        equals += "\'"+id+"\'";
+                        break;
+                    default:
+                        equals += id;
+                }
+            }
+        }
+
+        return query + equals + ";";
+    }
+
     // Insert query
-    private String createPersistQuery(Object obj) {
+    private static String createPersistQuery(Object obj) {
         Class clase = obj.getClass();
         String query = "";
         Entity entity = (Entity) clase.getAnnotation(Entity.class);
@@ -118,7 +159,7 @@ public class Persistence {
         return query + " VALUES (" + params.substring(0, params.length() - 1) + ");";
     }
 
-    private List<Object> getValues(Object obj) throws IllegalArgumentException, IllegalAccessException,
+    private static List<Object> getValues(Object obj) throws IllegalArgumentException, IllegalAccessException,
             InvocationTargetException, NoSuchMethodException, SecurityException {
 
         Class clase = obj.getClass();
@@ -139,10 +180,9 @@ public class Persistence {
         return values;
     }
 
-    private PreparedStatement createPreparedStatement(String query, Object obj) throws Exception {
-        Class clase = obj.getClass();
-        List values = this.getValues(obj);
-        Connection connection = this.getConnection(obj.getClass());
+    private static PreparedStatement createPreparedStatement(String query, Object obj) throws Exception {
+        List values = Persistence.getValues(obj);
+        Connection connection = Persistence.getConnection(obj.getClass());
         PreparedStatement preparedStatement = connection.prepareStatement(query);
         int i = 1;
         for (Object value : values) {
@@ -156,16 +196,24 @@ public class Persistence {
     /*
      * ****************************** CRUD ***********************************
      */
-    public void create(Class clase) throws Exception {
-        String query = this.createQuery(clase);
-        Connection connection = this.getConnection(clase);
+    public static void create(Class clase) throws Exception {
+        String query = Persistence.createQuery(clase);
+        Connection connection = Persistence.getConnection(clase);
         Statement statement = connection.createStatement();
         statement.execute(query);
     }
-    
-    public void persist(Object obj) throws Exception {
-        String query = this.createPersistQuery(obj);
-        PreparedStatement preparedStatement = this.createPreparedStatement(query, obj);
+
+    public static ResultSet get(Class clase, Object id) throws Exception {
+        String query = Persistence.createSelectQuery(clase, id);
+        System.out.println(query);
+        Connection connection = Persistence.getConnection(clase);
+        Statement statement = connection.createStatement();
+        return statement.executeQuery(query);
+    }
+
+    public static void persist(Object obj) throws Exception {
+        String query = Persistence.createPersistQuery(obj);
+        PreparedStatement preparedStatement = Persistence.createPreparedStatement(query, obj);
         preparedStatement.execute();
     }
     /*

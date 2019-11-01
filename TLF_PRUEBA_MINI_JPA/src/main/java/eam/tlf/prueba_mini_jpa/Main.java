@@ -7,7 +7,7 @@ package eam.tlf.prueba_mini_jpa;
 
 import eam.tlf.mini_jpa.connection.Persistence;
 import eam.tlf.prueba_mini_jpa.Models.Person;
-import java.util.Arrays;
+import java.sql.ResultSet;
 import java.util.logging.Logger;
 
 /**
@@ -20,13 +20,16 @@ public class Main {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-
-        Persistence persistence = new Persistence();
-
         try {
-            persistence.create(Person.class);
-            Person person = new Person("1094971007", "Daryl");
-            persistence.persist(person);
+//            Persistence.create(Person.class);
+//            Person person = new Person("1094971007", "Daryl");
+            ResultSet resultSet = Persistence.get(Person.class, "1094971007");
+            Person person = null;
+            while (resultSet.next()) {
+                person = new Person(resultSet.getString("id"), resultSet.getString("name"));
+            }
+            
+            System.out.println(person.toString());
         } catch (Exception e) {
             Logger.getLogger(Persistence.class.getSimpleName()).severe(e.getMessage());
         }

@@ -46,4 +46,9 @@ public class Person {
     public void setName(String name) {
         this.name = name;
     }
+
+    @Override
+    public String toString() {
+        return "{\n\tid : "+this.cc+",\n\tname : "+this.name+"\n}";
+    }
 }
