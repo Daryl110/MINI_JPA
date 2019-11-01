@@ -45,6 +45,45 @@ public class Persistence {
         return properties;
     }
     
+    // Create table query
+    private String createQuery(Class clase) {
+        String query = "";
+        Entity entity = (Entity) clase.getAnnotation(Entity.class);
+
+        if (entity != null) {
+            query += "CREATE TABLE " + entity.schema() + "." + entity.name();
+        } else {
+            query += "CREATE TABLE " + clase.getSimpleName();
+        }
+
+        query += "(";
+
+        String cols = "";
+
+        Field[] attributes = clase.getDeclaredFields();
+        for (Field field : attributes) {
+            Column column = (Column) field.getAnnotation(Column.class);
+
+            if (column == null) {
+                break;
+            }
+
+            cols += column.name();
+            
+            switch (field.getType().getSimpleName()) {
+                case "String":
+                    cols += " varchar(255)";
+                    break;
+                default:
+                    throw new AssertionError();
+            }
+            
+            cols += ",";
+        }
+
+        return query + cols.substring(0, cols.length() - 1) + ");";
+    }
+    
     // Insert query
     private String createPersistQuery(Object obj) {
         Class clase = obj.getClass();
@@ -114,15 +153,22 @@ public class Persistence {
         return preparedStatement;
     }
 
-    /**
+    /*
      * ****************************** CRUD ***********************************
      */
+    public void create(Class clase) throws Exception {
+        String query = this.createQuery(clase);
+        Connection connection = this.getConnection(clase);
+        Statement statement = connection.createStatement();
+        statement.execute(query);
+    }
+    
     public void persist(Object obj) throws Exception {
         String query = this.createPersistQuery(obj);
         PreparedStatement preparedStatement = this.createPreparedStatement(query, obj);
         preparedStatement.execute();
     }
-    /**
+    /*
      * **************************** FIN CRUD *********************************
      */
 }

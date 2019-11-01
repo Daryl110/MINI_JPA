@@ -24,6 +24,7 @@ public class Main {
         Persistence persistence = new Persistence();
 
         try {
+            persistence.create(Person.class);
             Person person = new Person("1094971007", "Daryl");
             persistence.persist(person);
         } catch (Exception e) {
